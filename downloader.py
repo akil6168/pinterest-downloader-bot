@@ -14,7 +14,13 @@ def download_media(url):
         info = ydl.extract_info(url, download=True)
         filepath = ydl.prepare_filename(info)
 
-    caption = info.get('description') or info.get('title') or ""
+    caption = (
+        info.get('description')
+        or info.get('title')
+        or info.get('alt_title')
+        or ""
+    )
+    caption = caption.strip()
 
     if filepath.endswith(('.jpg', '.jpeg', '.png', '.webp')):
         return filepath, "photo", caption
