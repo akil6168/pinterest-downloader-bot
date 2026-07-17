@@ -207,12 +207,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = await update.message.reply_text("⏳ Downloading...")
     try:
-        filepath, media_type = download_media(text)
-        caption = "✅ Downloaded successfully!\n\n🤖 @AllSaverPinDownloader_bot"
+        filepath, media_type, original_caption = download_media(text)
+
+        bot_tag = "\n\n🤖 @AllSaverPinDownloader_bot"
+        max_caption_len = 1024 - len(bot_tag)
+        if original_caption and len(original_caption) > max_caption_len:
+            original_caption = original_caption[:max_caption_len - 3] + "..."
+
+        caption = (original_caption + bot_tag) if original_caption else f"✅ Downloaded successfully!{bot_tag}"
+
         if media_type == "video":
-            await update.message.reply_video(video=open(filepath, 'rb'), caption=caption)
+            await update.message.reply_video(
+                video=open(filepath, 'rb'),
+                caption=caption,
+                write_timeout=120,
+                read_timeout=120,
+                connect_timeout=60,
+                pool_timeout=60,
+            )
         else:
-            await update.message.reply_photo(photo=open(filepath, 'rb'), caption=caption)
+            await update.message.reply_photo(
+                photo=open(filepath, 'rb'),
+                caption=caption,
+                write_timeout=120,
+                read_timeout=120,
+                connect_timeout=60,
+                pool_timeout=60,
+            )
         os.remove(filepath)
     except Exception as e:
         await update.message.reply_text(f"❌ Sorry, download failed.\nReason: {str(e)}")
@@ -221,7 +242,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .read_timeout(120)
+        .write_timeout(120)
+        .connect_timeout(60)
+        .pool_timeout(60)
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
