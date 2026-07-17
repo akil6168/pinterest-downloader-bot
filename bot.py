@@ -1,44 +1,42 @@
 import logging
 import os
-import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from downloader import download_media
+from pymongo import MongoClient
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 5724602667
-CHANNELS_FILE = "channels.json"
-USERS_FILE = "users.json"
+MONGO_URI = os.environ.get("MONGO_URI")
 
-
-# ---------- Storage helpers ----------
-def load_json(path):
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            return json.load(f)
-    return []
-
-
-def save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f)
+# ---------- MongoDB setup ----------
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["allsaverbot"]
+channels_col = db["channels"]
+users_col = db["users"]
 
 
 def load_channels():
-    return load_json(CHANNELS_FILE)
+    return list(channels_col.find({}, {"_id": 0}))
 
 
-def save_channels(channels):
-    save_json(CHANNELS_FILE, channels)
+def save_channel(channel):
+    channels_col.insert_one(channel)
+
+
+def delete_channel(channel_id):
+    channels_col.delete_one({"id": channel_id})
 
 
 def track_user(user_id):
-    users = load_json(USERS_FILE)
-    if user_id not in users:
-        users.append(user_id)
-        save_json(USERS_FILE, users)
+    if not users_col.find_one({"user_id": user_id}):
+        users_col.insert_one({"user_id": user_id})
+
+
+def get_all_users():
+    return [u["user_id"] for u in users_col.find({}, {"user_id": 1})]
 
 
 # ---------- Force-join logic ----------
@@ -156,34 +154,29 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("rm_"):
         channel_id = data[3:]
-        channels = load_channels()
-        channels = [c for c in channels if c["id"] != channel_id]
-        save_channels(channels)
+        delete_channel(channel_id)
         await query.message.edit_text(f"✅ Channel removed: {channel_id}")
 
 
-# ---------- Message handler (handles admin replies + normal links) ----------
+# ---------- Message handler ----------
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
 
-    # Handle admin awaiting input
     if user_id == ADMIN_ID and context.user_data.get("awaiting"):
         awaiting = context.user_data.pop("awaiting")
 
         if awaiting == "add_channel":
             try:
                 channel_id, link, name = [p.strip() for p in text.split("|")]
-                channels = load_channels()
-                channels.append({"id": channel_id, "link": link, "name": name})
-                save_channels(channels)
+                save_channel({"id": channel_id, "link": link, "name": name})
                 await update.message.reply_text(f"✅ Channel added: {name}")
             except ValueError:
                 await update.message.reply_text("❌ Wrong format. Use: @channel | link | Name")
             return
 
         if awaiting == "broadcast":
-            users = load_json(USERS_FILE)
+            users = get_all_users()
             sent, failed = 0, 0
             for uid in users:
                 try:
@@ -194,7 +187,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"📢 Broadcast done.\nSent: {sent} | Failed: {failed}")
             return
 
-    # Normal user flow
     track_user(user_id)
     not_joined = await check_membership(user_id, context)
     if not_joined:
