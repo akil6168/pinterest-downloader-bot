@@ -1,5 +1,7 @@
 import logging
 import os
+from flask import Flask
+from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from downloader import download_media
@@ -11,6 +13,19 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 5724602667
 MONGO_URI = os.environ.get("MONGO_URI")
+
+# ---------- Dummy web server (keeps Render happy) ----------
+flask_app = Flask(__name__)
+
+
+@flask_app.route('/')
+def home():
+    return "Bot is running!"
+
+
+def run_flask():
+    flask_app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+
 
 # ---------- MongoDB setup ----------
 mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
@@ -273,4 +288,5 @@ def main():
 
 
 if __name__ == "__main__":
+    Thread(target=run_flask).start()
     main()
