@@ -73,7 +73,7 @@ async def send_force_join(update, not_joined):
     buttons = []
     for ch in not_joined:
         buttons.append([InlineKeyboardButton(f"📢 Join {ch['name']}", url=ch["link"])])
-    buttons.append([InlineKeyboardButton("✅ I've Joined", callback_data="check_join")])
+    buttons.append([InlineKeyboardButton("✅ Joined", callback_data="check_join")])
     await update.message.reply_text(
         "🚫 To use this bot, please join our channel(s) first.\n\n"
         "After joining, tap the button below.",
@@ -89,9 +89,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_force_join(update, not_joined)
         return
     await update.message.reply_text(
-        "👋 Welcome!\n\n"
-        "Send me a link from Pinterest, TikTok, Instagram, Facebook or YouTube "
-        "and I'll download it for you. 🚀"
+        "👋 Welcome to All Saver Bot!\n\n📥 Download videos, photos, reels, shorts, stories & audio in seconds.\n\n🔗 Simply send a link from YouTube, Facebook, Instagram, TikTok, Pinterest, or any supported platform.\n\n🚀 I'll instantly fetch and deliver the highest available quality."
     )
 
 
