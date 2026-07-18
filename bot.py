@@ -4,6 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceRe
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from downloader import download_media
 from pymongo import MongoClient
+import certifi
 
 logging.basicConfig(level=logging.INFO)
 
@@ -12,7 +13,7 @@ ADMIN_ID = 5724602667
 MONGO_URI = os.environ.get("MONGO_URI")
 
 # ---------- MongoDB setup ----------
-mongo_client = MongoClient(MONGO_URI)
+mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = mongo_client["allsaverbot"]
 channels_col = db["channels"]
 users_col = db["users"]
