@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from flask import Flask
 from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
@@ -231,7 +232,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please send a valid link.")
         return
 
-    msg = await update.message.reply_text("⏳ Downloading...")
+    msg = await update.message.reply_text("⏳ Download in progress...")
+
+    async def animate_loading():
+        frames = ["⏳ Download in progress...", "⌛ Download in progress..."]
+        i = 0
+        while True:
+            await asyncio.sleep(2)
+            try:
+                await msg.edit_text(frames[i % len(frames)])
+            except Exception:
+                break
+            i += 1
+
+    animation_task = asyncio.create_task(animate_loading())
+
     try:
         filepath, media_type, original_caption = download_media(text)
 
@@ -264,6 +279,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Sorry, download failed.\nReason: {str(e)}")
     finally:
+        animation_task.cancel()
         await msg.delete()
 
 
