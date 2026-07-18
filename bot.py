@@ -122,9 +122,10 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "admin_add":
         context.user_data["awaiting"] = "add_channel"
         await query.message.reply_text(
-            "Send the channel details in this format (one line):\n\n"
-            "@channelusername | https://t.me/channelusername | Channel Display Name\n\n"
-            "Example:\n@mychannel | https://t.me/mychannel | My Awesome Channel",
+            "Send the channel invite link:\n\n"
+            "Example:\nhttps://t.me/mychannel\n\n"
+            "(For private channels, use the invite link like https://t.me/+xxxxx — "
+            "make sure the bot is an admin in that channel first.)",
             reply_markup=ForceReply(selective=True)
         )
 
@@ -168,12 +169,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         awaiting = context.user_data.pop("awaiting")
 
         if awaiting == "add_channel":
+            link = text.strip()
             try:
-                channel_id, link, name = [p.strip() for p in text.split("|")]
+                chat = await context.bot.get_chat(link)
+                channel_id = chat.id
+                name = chat.title or chat.username or link
                 save_channel({"id": channel_id, "link": link, "name": name})
                 await update.message.reply_text(f"✅ Channel added: {name}")
-            except ValueError:
-                await update.message.reply_text("❌ Wrong format. Use: @channel | link | Name")
+            except Exception as e:
+                await update.message.reply_text(
+                    f"❌ Couldn't add channel.\nMake sure the bot is an admin in that channel, "
+                    f"and the link is correct.\n\nError: {str(e)}"
+                )
             return
 
         if awaiting == "broadcast":
