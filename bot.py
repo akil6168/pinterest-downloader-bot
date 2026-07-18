@@ -171,9 +171,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if awaiting == "add_channel":
             link = text.strip()
             try:
-                chat = await context.bot.get_chat(link)
+                if "t.me/+" in link or "joinchat" in link:
+                    await update.message.reply_text(
+                        "❌ For private channels, this method won't work automatically.\n\n"
+                        "Please forward any message from that channel to me instead, "
+                        "or use the manual format:\n"
+                        "channel_id | link | Name"
+                    )
+                    return
+
+                username = link.split("t.me/")[-1].strip("/")
+                if not username.startswith("@"):
+                    username = "@" + username
+
+                chat = await context.bot.get_chat(username)
                 channel_id = chat.id
-                name = chat.title or chat.username or link
+                name = chat.title or chat.username or username
                 save_channel({"id": channel_id, "link": link, "name": name})
                 await update.message.reply_text(f"✅ Channel added: {name}")
             except Exception as e:
