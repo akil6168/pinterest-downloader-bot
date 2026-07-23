@@ -7,7 +7,8 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 def download_media(url):
     ydl_opts = {
         'outtmpl': f'{DOWNLOAD_DIR}/%(id)s.%(ext)s',
-        'format': 'best',
+        'format': 'bestvideo+bestaudio/best',
+        'merge_output_format': 'mp4',
         'quiet': True,
     }
     if os.path.exists("cookies.txt"):
